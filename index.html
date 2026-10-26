@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="ko">
 <head>
+<script type="module">
+  import { createSDK } from "https://h5sdk.onestore.net/lib/v1.1.0/onestore-h5-sdk.min.js";
+  const sdk = createSDK();
+  const game = fn => { if (window.Tteokjanchi) fn(window.Tteokjanchi); else window.addEventListener('tteokjanchi:ready', () => fn(window.Tteokjanchi), { once: true }); };
+  sdk.on("pause", () => game(g => g.pause()));
+  sdk.on("resume", () => game(g => g.resume()));
+  sdk.on("exit", () => { if (window.Tteokjanchi) window.Tteokjanchi.save(); }); // 동기 저장만 (0.5초 안)
+  sdk.onBackPressed(() => !!(window.Tteokjanchi && window.Tteokjanchi.back()));
+  sdk.initializeAsync()
+    .then(info => {
+      if (info.err) return;
+      sdk.setLoadingProgress(100);
+      return sdk.startGameAsync();
+    })
+    .catch(e => console.error("onestore sdk", e && e.reason, e && e.message));
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>떡잔치</title>
@@ -123,7 +139,7 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .adfake { font-family: var(--font-display); font-size: 22px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .banner { animation-duration: .01s; } .btn, .tool, .round-btn { transition: none; } }
 </style>
-  <script type="module" crossorigin src="./assets/index-D9d3o6GA.js"></script>
+  <script type="module" crossorigin src="./assets/index-CjzTQTqg.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-BMt33rOE.css">
 </head>
 <body>
