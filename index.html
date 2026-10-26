@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>떡잔치</title>
+<style>
+/* 레이아웃: 밤 잔칫집 — 등불 빛이 도는 먹색 마당 위에 자개 테를 두른 소반 한 장. 위 점수·하트 → 오늘의 주문 → 소반 → 다음 접시·도구 */
+:root {
+  --night: #11182a;    /* 먹빛 밤 */
+  --night-2: #1a2338;  /* 패널 */
+  --line: rgba(232, 214, 176, .12); /* 얇은 금빛 테두리 */
+  --lacquer: #5b2418;  /* 옻칠 테 */
+  --inlay: #d9b26a;    /* 자개·금 상감 */
+  --gold: #f0c35a;     /* 점수·완성 */
+  --red: #e0533f;      /* 하트·경고 */
+  --text: #f7efe1;
+  --muted: #9aa5ba;
+  --font-display: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; } /* 아티팩트 틀이 해 주던 숨김을 직접 */
+body {
+  background: radial-gradient(120% 60% at 50% 38%, #24304b 0%, var(--night) 62%), var(--night);
+  color: var(--text); font-family: var(--font-body); font-size: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none;
+}
+.app { height: 100%; max-width: 520px; margin: 0 auto; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding-top: var(--toss-top, max(10px, env(safe-area-inset-top, 0px))); padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
+button { -webkit-tap-highlight-color: transparent; }
+button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* 위: 점수 · 하트 · 버튼 */
+.top { display: flex; align-items: center; gap: 10px; }
+.score-box { display: grid; gap: 2px; }
+.label { font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+.score { font-family: var(--font-display); font-size: 34px; color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
+.best { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.spacer { flex: 1; }
+.hearts { display: grid; justify-items: end; gap: 3px; }
+.hearts-row { display: flex; gap: 2px; }
+.hearts-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.heart { width: 18px; height: 18px; display: block; }
+.heart path { fill: var(--red); }
+.heart.empty path { fill: none; stroke: #4a5774; stroke-width: 2; }
+.round-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--night-2); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: transform .12s; }
+.round-btn:active { transform: scale(.94); }
+.round-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#soundBtn[data-on="0"] .wave { display: none; }
+#soundBtn[data-on="1"] .mute { display: none; }
+
+/* 오늘의 주문: 주문서 한 줄 */
+.orders { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)), var(--night-2); border: 1px solid var(--line); }
+.orders-title { font-family: var(--font-display); font-size: 15px; color: var(--inlay); line-height: 1.1; }
+.orders-title small { display: block; font-family: var(--font-body); font-size: 11px; color: var(--muted); }
+.orders-list { flex: 1; display: flex; gap: 6px; justify-content: flex-end; }
+.order { position: relative; display: flex; align-items: center; gap: 4px; padding: 3px 9px 3px 3px; border-radius: 999px; background: rgba(255,255,255,.05); font-family: var(--font-display); font-size: 15px; font-variant-numeric: tabular-nums; }
+.order canvas { width: 30px; height: 30px; }
+.order.done { background: rgba(240,195,90,.16); color: var(--gold); }
+.order.done::after { content: ""; position: absolute; left: 22px; top: 0; width: 13px; height: 13px; border-radius: 50%; background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6.2l2 2 4-4.4' fill='none' stroke='%232a1a08' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/100% no-repeat; }
+
+/* 소반 */
+.stage { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; }
+#board { touch-action: none; border-radius: 26px; background: #f1e5cc;
+  box-shadow: 0 0 0 2px var(--inlay), 0 0 0 9px var(--lacquer), 0 0 0 10px rgba(217,178,106,.45), 0 22px 40px rgba(0,0,0,.5), inset 0 0 40px rgba(120,80,30,.15); }
+
+/* 아래: 다음 접시 · 도구 */
+.bottom { display: flex; align-items: center; gap: 8px; }
+.next { display: flex; align-items: center; gap: 8px; }
+.next canvas { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle, #f6ecd8 0 58%, #e3d2b0 60% 66%, #c9b28a 68%); box-shadow: 0 4px 10px rgba(0,0,0,.35); }
+.next .label { writing-mode: horizontal-tb; }
+.tool { display: flex; align-items: center; gap: 6px; height: 48px; padding: 0 14px 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--night-2); color: var(--text); font-family: var(--font-display); font-size: 15px; cursor: pointer; transition: transform .12s, border-color .2s; }
+.tool:active { transform: scale(.96); }
+.tool svg { width: 20px; height: 20px; stroke: var(--inlay); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tool .count { min-width: 20px; height: 20px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: 12px; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.tool.active { border-color: var(--gold); color: var(--gold); }
+.tool[disabled] { opacity: .4; }
+
+/* 안내·알림 */
+.hint { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); background: rgba(17,24,42,.9); color: var(--text); padding: 10px 16px; border-radius: 999px; font-size: 16px; text-align: center; pointer-events: none; transition: opacity .4s; width: max-content; max-width: 90%; border: 1px solid var(--line); }
+.banner { position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%); padding: 10px 20px; border-radius: 999px; background: rgba(17,24,42,.92); border: 1px solid rgba(240,195,90,.5); font-family: var(--font-display); font-size: 22px; color: var(--gold); pointer-events: none; text-align: center; animation: pop 1.6s ease-out forwards; width: max-content; max-width: 92%; box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%,-30%) scale(.8); } 14% { opacity: 1; transform: translate(-50%,-50%) scale(1.04); } 22% { transform: translate(-50%,-50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-62%); } }
+
+/* 창 (시작·끝·도감) */
+.overlay { position: fixed; inset: 0; background: rgba(8,12,22,.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+.sheet { position: relative; background: linear-gradient(180deg, #212b44, var(--night-2)); border: 1px solid var(--line); border-radius: 26px; padding: 26px 20px 20px; width: min(400px, 100%); display: grid; gap: 12px; text-align: center; max-height: 92%; overflow: auto; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+.sheet::before { content: ""; position: absolute; left: 24px; right: 24px; top: 0; height: 4px; border-radius: 0 0 4px 4px; background: linear-gradient(90deg, #3d7bc4 0 20%, #e0533f 20% 40%, #f0c35a 40% 60%, #f7efe1 60% 80%, #2b2f3a 80%); opacity: .85; } /* 오방색 띠 */
+.sheet h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 28px; color: var(--text); text-wrap: balance; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--inlay); }
+.big-score { font-family: var(--font-display); font-size: 54px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.goal { font-size: 17px; color: var(--text); }
+.sub { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.start-hearts { display: flex; justify-content: center; gap: 6px; }
+.start-hearts .heart { width: 30px; height: 30px; }
+.rules { display: grid; gap: 4px; font-size: 16px; }
+.btn { border: 0; border-radius: 999px; font-family: var(--font-display); font-size: 19px; padding: 15px; cursor: pointer; transition: transform .12s; }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: linear-gradient(180deg, #f6d27a, #e4ae3e); color: #2a1a08; font-size: 23px; padding: 18px; box-shadow: 0 6px 0 #a87622, 0 10px 20px rgba(0,0,0,.3); }
+.btn.primary:active { transform: translateY(3px); box-shadow: 0 3px 0 #a87622, 0 6px 12px rgba(0,0,0,.3); }
+.btn.secondary { background: rgba(255,255,255,.07); color: var(--text); border: 1px solid var(--line); }
+.btn[disabled] { opacity: .6; cursor: default; }
+.btn.primary[disabled] { background: rgba(255,255,255,.08); color: var(--muted); box-shadow: none; font-size: 19px; }
+.btn .tag { font-family: var(--font-body); font-size: 11px; background: rgba(0,0,0,.25); color: var(--muted); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+.btn.primary .tag { display: block; width: max-content; margin: 4px auto 0; font-size: 12px; background: rgba(42,26,8,.14); color: #5a3f12; } /* 큰 버튼은 글자가 길어 꼬리표를 아랫줄에 */
+.dex { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; }
+.dex-item { display: grid; gap: 4px; justify-items: center; font-size: 13px; }
+.dex-item canvas { width: 58px; height: 58px; }
+/* 주간 기록: 시작 화면 한 줄 요약 + 도감 창 TOP 5 */
+.week { display: grid; gap: 2px; padding: 10px 14px; border-radius: 16px; background: rgba(0,0,0,.2); border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.week b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.week-top { text-align: left; background: rgba(0,0,0,.2); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; font-size: 14px; }
+.week-top h3 { margin: 0 0 6px; font-family: var(--font-display); font-weight: 400; font-size: 16px; color: var(--inlay); }
+.week-top ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; counter-reset: wk; }
+.week-top li { display: flex; justify-content: space-between; counter-increment: wk; }
+.week-top li::before { content: counter(wk) "등"; color: var(--muted); width: 36px; }
+.week-top li b { margin-left: auto; font-family: var(--font-display); font-weight: 400; color: var(--gold); font-variant-numeric: tabular-nums; }
+.week-top .empty { color: var(--muted); }
+.stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; text-align: left; font-size: 14px; background: rgba(0,0,0,.2); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.stats b { font-family: var(--font-display); font-weight: 400; color: var(--gold); font-variant-numeric: tabular-nums; text-align: right; }
+.adfake { font-family: var(--font-display); font-size: 22px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .banner { animation-duration: .01s; } .btn, .tool, .round-btn { transition: none; } }
+</style>
+  <script type="module" crossorigin src="./assets/index-D9d3o6GA.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BMt33rOE.css">
+</head>
+<body>
+
+<div class="app">
+  <div class="top">
+    <div class="score-box">
+      <div class="label">점수</div>
+      <div class="score" id="score">0</div>
+      <div class="best">최고 <span id="best">0</span></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="hearts" aria-label="남은 하트"><div class="hearts-row" id="heartsRow"></div><div class="hearts-time" id="heartsTime"></div></div>
+    <button class="round-btn" id="dexBtn" type="button" aria-label="음식 도감">
+      <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M9 8h7M9 11.5h5"/></svg>
+    </button>
+    <button class="round-btn" id="soundBtn" type="button" aria-label="소리" data-on="1">
+      <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+    </button>
+  </div>
+  <div class="orders">
+    <div class="orders-title">오늘의 주문<small>매일 바뀌어요</small></div>
+    <div class="orders-list" id="orders"></div>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="board"></canvas>
+    <div class="hint" id="hint">손가락을 좌우로 움직이고, 떼면 떨어져요</div>
+  </div>
+  <div class="bottom">
+    <div class="next"><canvas id="nextCv" width="104" height="104"></canvas><span class="label">다음</span></div>
+    <div class="spacer"></div>
+    <button class="tool" id="shakeBtn" type="button" aria-label="흔들기">
+      <svg viewBox="0 0 24 24"><path d="M3 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M3 17c2-3 4-3 6 0s4 3 6 0 4-3 6 0" opacity=".5"/></svg>흔들기 <span class="count" id="shakeLeft">3</span>
+    </button>
+    <button class="tool" id="pickBtn" type="button" aria-label="하나 빼기">
+      <svg viewBox="0 0 24 24"><path d="M7 4l10 16M4 9.5l3-5.5 3 1.5"/><circle cx="17" cy="7" r="3"/></svg>빼기 <span class="count" id="pickLeft">3</span>
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="overOv" hidden>
+  <div class="sheet">
+    <div class="eyebrow">이번 판</div>
+    <h2 id="overTitle">상이 넘쳤어요</h2>
+    <div class="big-score" id="overScore">0</div>
+    <div class="goal" id="overGoal"></div>
+    <div class="sub" id="overOrders"></div>
+    <button class="btn primary" id="againBtn" type="button">다시 하기</button>
+    <button class="btn secondary" id="continueBtn" type="button">이어하기<span class="tag">광고 보고</span></button>
+    <div class="sub" id="continueSub">이어하기 = 위쪽 음식을 치우고 계속 (한 판에 1번)</div>
+    <button class="btn secondary" id="boardBtn" type="button" hidden>토스 순위 보기</button>
+  </div>
+</div>
+
+<div class="overlay" id="startOv" hidden>
+  <div class="sheet">
+    <div class="eyebrow">떨어뜨려 합치는 한식 퍼즐</div>
+    <h2>떡잔치</h2>
+    <div class="start-hearts" id="startHearts"></div>
+    <div class="rules">
+      <div>한 판은 <b id="ruleSec">90</b>초, <span id="ruleHeart">하트 1개를 써요</span></div>
+      <div class="sub">큰 음식을 합칠수록 시간이 늘어나요</div>
+    </div>
+    <div class="week" id="weekBox"></div>
+    <button class="btn primary" id="startBtn" type="button">시작</button>
+    <button class="btn secondary" id="heartAdBtn" type="button">하트 1개 받기<span class="tag">광고 보고</span></button>
+    <button class="btn secondary" id="startBoardBtn" type="button" hidden>토스 순위 보기</button>
+    <div class="sub" id="startSub"></div>
+  </div>
+</div>
+
+<div class="overlay" id="exitOv" hidden>
+  <div class="sheet">
+    <h2>게임을 끝낼까요?</h2>
+    <div class="sub" id="exitSub">최고 기록과 도감은 저장돼요</div>
+    <button class="btn primary" id="exitStay" type="button">계속하기</button>
+    <button class="btn secondary" id="exitQuit" type="button">끝내기</button>
+  </div>
+</div>
+
+<div class="overlay" id="adOv" hidden>
+  <div class="sheet"><div class="adfake">광고 보는 중</div><div class="sub">광고가 끝나면 이어서 해요</div></div>
+</div>
+
+<div class="overlay" id="dexOv" hidden>
+  <div class="sheet">
+    <div class="eyebrow">처음 만든 음식이 밝게 바뀌어요</div>
+    <h2>음식 도감</h2>
+    <div class="dex" id="dex"></div>
+    <div class="week-top" id="weekTop"></div>
+    <div class="stats" id="stats"></div>
+    <button class="btn secondary" id="musicBtn" type="button" aria-pressed="true">음악 켬</button>
+    <button class="btn secondary" id="dexClose" type="button">닫기</button>
+  </div>
+</div>
+
+</body>
+</html>
